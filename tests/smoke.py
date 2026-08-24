@@ -41,6 +41,9 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     failures = 0
     data = model.normalize(copy.deepcopy(model.SAMPLE))
+    sample_name = data["person"]["lastName"]
+    sample_company = data["experience"][0]["company"]
+    sample_recipient = data["letter"]["company"]
 
     for template in (entry["id"] for entry in model.TEMPLATES):
         print(f"\nTemplate „{template}“")
@@ -62,7 +65,8 @@ def main() -> int:
         failures += not check(raw.startswith(b"%PDF"), "PDF produced")
         failures += not check(1 <= len(doc.pages) <= 3, f"{len(doc.pages)} page(s)")
         failures += not check(len(images) == len(doc.pages), "preview images complete")
-        failures += not check("Hoffmann" in html and "Vektor Mobility" in html, "content in the HTML")
+        failures += not check(sample_name in html and sample_company in html,
+                              "content in the HTML")
         failures += not check(elapsed < 5, f"render time {elapsed:.2f}s")
 
     print("\nLayout")
@@ -84,7 +88,7 @@ def main() -> int:
     (OUT / "letter.pdf").write_bytes(letter_doc.write_pdf())
     (OUT / "letter.html").write_text(letter_html, encoding="utf-8")
     failures += not check(len(letter_doc.pages) == 1, f"letter fits one page ({len(letter_doc.pages)})")
-    failures += not check("Nordlicht Robotics" in letter_html and "Kennziffer" in letter_html,
+    failures += not check(sample_recipient in letter_html and "Kennziffer" in letter_html,
                           "recipient block rendered")
     failures += not check("Sehr geehrte Damen und Herren," in letter_html
                           and "Mit freundlichen Grüßen" in letter_html, "defaults filled in")
@@ -116,7 +120,7 @@ def main() -> int:
 
     _, letter_prompt, letter_kind, letter_apply = prompts.build("letter", data, {"posting": "EtherCAT"})
     failures += not check(letter_kind == "letter" and letter_apply
-                          and "Nordlicht Robotics" in letter_prompt, "letter prompt")
+                          and sample_recipient in letter_prompt, "letter prompt")
 
     print("\nSpecial cases")
     blank = model.normalize({})
@@ -178,7 +182,7 @@ def main() -> int:
 
     print("\nAI plumbing")
     system, prompt, kind, applicable = prompts.build("summary", data, {})
-    failures += not check("Vektor Mobility" in prompt and kind == "text" and applicable,
+    failures += not check(sample_company in prompt and kind == "text" and applicable,
                           "prompt carries the resume")
     failures += not check(len(prompts.parse_skills("Tools: Git, CMake\nLanguages: C")) == 2,
                           "skills answer parser")
@@ -193,7 +197,7 @@ def main() -> int:
     failures += not check("anthropic" in settings.ENV_KEYS, "environment key fallback")
 
     round_trip = model.normalize(json.loads(json.dumps(data)))
-    failures += not check(round_trip["person"]["lastName"] == "Hoffmann", "JSON round trip")
+    failures += not check(round_trip["person"]["lastName"] == sample_name, "JSON round trip")
 
     print(f"\n{'All good.' if not failures else f'{failures} check(s) failed.'}")
     print(f"Artifacts in {OUT}/")

@@ -11,7 +11,28 @@ from pathlib import Path
 from . import model, pdf, server
 
 DEFAULT_FILE = Path("data/resume.json")
-WINDOW_WIDTH, WINDOW_HEIGHT = 1360, 860
+WINDOW_MIN = (1040, 660)
+WINDOW_MAX = (2000, 1280)
+WINDOW_SHARE = (0.78, 0.84)     # share of the screen to occupy
+WINDOW_FALLBACK = (1560, 980)
+
+
+def _window_size(webview) -> tuple[int, int]:
+    """Fill a good part of the screen without ever exceeding it."""
+    try:
+        screen = (webview.screens or [None])[0]
+        available = (screen.width, screen.height) if screen else None
+    except Exception:  # noqa: BLE001 – screen enumeration is platform dependent
+        available = None
+    if not available:
+        return WINDOW_FALLBACK
+
+    size = []
+    for index, room in enumerate(available):
+        wanted = int(room * WINDOW_SHARE[index])
+        wanted = min(max(wanted, WINDOW_MIN[index]), WINDOW_MAX[index])
+        size.append(min(wanted, room - (40 if index == 0 else 80)))
+    return size[0], size[1]
 
 
 def _run_window(state: server.State, address: str) -> int:
@@ -21,12 +42,13 @@ def _run_window(state: server.State, address: str) -> int:
         print("pywebview is not installed – falling back to web mode.", file=sys.stderr)
         return _run_web(address)
 
+    width, height = _window_size(webview)
     window = webview.create_window(
         "CVBoreout",
         address,
-        width=WINDOW_WIDTH,
-        height=WINDOW_HEIGHT,
-        min_size=(1080, 680),
+        width=width,
+        height=height,
+        min_size=WINDOW_MIN,
         background_color="#0e1219",
         text_select=True,
     )
