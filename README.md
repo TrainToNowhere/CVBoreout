@@ -1,19 +1,11 @@
 # CVBoreout
 
-A desktop app for writing a resume and cover letter for STEM jobs and exporting
-them as PDF.
+A desktop app for writing a resume and cover letter for STEM jobs and exporting them as PDF.
 
 ## Why
 
-Word templates break as soon as a bullet point grows, online builders want an
-account and keep the data, and LaTeX costs an evening before the first line is
-written. CVBoreout keeps the content in one JSON file, renders the layout from
-it, and shows the finished PDF page while typing — what you see is the file that
-gets exported, not a preview of it.
-
-An assistant drafts wording from the resume and a pasted job posting: profile
-text, bullet points, skills, the cover letter, a review, or a match report. It
-runs against local Ollama or the Anthropic, OpenAI and OpenRouter APIs.
+Because im a developer and i develop solutions for problems.
+It automates the repetitive, useless and boring work on design, layout, fonts and line spacing.
 
 ## The design
 
