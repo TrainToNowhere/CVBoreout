@@ -1,0 +1,4 @@
+weasyprint>=62      # HTML -> PDF
+pypdfium2>=4.30     # PDF -> pixel preview
+pillow>=10.0        # image conversion for the preview
+pywebview>=5.0      # desktop window (uses the system GTK/WebKit or Qt bindings)

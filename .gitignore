@@ -1,0 +1,6 @@
+.venv/
+export/
+__pycache__/
+*.pyc
+data/resume.json
+.idea/

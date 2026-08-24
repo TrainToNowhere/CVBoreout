@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CVBoreout</title>
+    <link rel="stylesheet" href="/static/app.css">
+</head>
+<body data-token="__TOKEN__">
+
+<header class="topbar">
+    <div class="brand"><span class="dot"></span>CV<b>Boreout</b></div>
+
+    <div class="tools">
+        <label class="inline"><span data-i18n="app.template"></span>
+            <select id="template"></select>
+        </label>
+        <div class="accents" id="accents"></div>
+        <label class="picker" data-i18n-title="app.customAccent">
+            <input type="color" id="accent-custom"><span>+</span>
+        </label>
+        <label class="inline"><span data-i18n="app.density"></span>
+            <select id="density">
+                <option value="tight" data-i18n="density.tight"></option>
+                <option value="normal" data-i18n="density.normal"></option>
+                <option value="airy" data-i18n="density.airy"></option>
+            </select>
+        </label>
+        <label class="inline"><span data-i18n="app.language"></span>
+            <select id="language"></select>
+        </label>
+    </div>
+
+    <div class="actions">
+        <button class="btn ghost" id="btn-ai" data-i18n="app.ai"></button>
+        <button class="btn" id="btn-pdf" data-i18n="app.export"></button>
+        <div class="menu-holder">
+            <button class="btn ghost round" id="btn-menu" data-i18n-title="app.more">⋯</button>
+            <div class="menu" id="menu" hidden>
+                <button data-menu="save" data-i18n="menu.save"></button>
+                <button data-menu="json-save" data-i18n="menu.jsonSave"></button>
+                <button data-menu="json-load" data-i18n="menu.jsonLoad"></button>
+                <hr>
+                <button data-menu="sample" data-i18n="menu.sample"></button>
+                <button data-menu="clear" data-i18n="menu.clear"></button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="stage">
+    <section class="editor" id="editor"></section>
+    <div class="handle" id="handle"></div>
+    <section class="preview">
+        <div class="preview-bar">
+            <span class="status" id="status"></span>
+            <div class="docs" id="docs">
+                <button data-doc="resume" class="active" data-i18n="doc.resume"></button>
+                <button data-doc="letter" data-i18n="doc.letter"></button>
+                <button data-doc="both" data-i18n="doc.both"></button>
+            </div>
+            <div class="spacer"></div>
+            <div class="zoom">
+                <button class="btn tiny" id="zoom-out">−</button>
+                <span id="zoom-value">100 %</span>
+                <button class="btn tiny" id="zoom-in">+</button>
+                <button class="btn tiny" id="zoom-fit" data-i18n="zoom.fit"></button>
+            </div>
+            <span class="pages" id="page-info"></span>
+        </div>
+        <div class="pages-view" id="pages"></div>
+    </section>
+</main>
+
+<aside class="ai" id="ai" hidden>
+    <div class="ai-handle" id="ai-handle"></div>
+    <div class="ai-head">
+        <b data-i18n="ai.title"></b>
+        <span class="ai-status" id="ai-status"></span>
+        <button class="btn ghost round" id="ai-close">×</button>
+    </div>
+
+    <div class="ai-body">
+        <label class="field"><span class="label" data-i18n="ai.provider"></span>
+            <select id="ai-provider"></select>
+        </label>
+
+        <label class="field" id="key-field" hidden>
+            <span class="label"><span data-i18n="ai.apiKey"></span> <em id="key-state"></em></span>
+            <div class="row">
+                <input type="password" id="ai-key" autocomplete="off">
+                <button class="btn tiny" id="ai-key-save" data-i18n="ai.saveKey"></button>
+            </div>
+        </label>
+
+        <label class="field"><span class="label" data-i18n="ai.model"></span>
+            <div class="row">
+                <select id="ai-model"></select>
+                <button class="btn tiny" id="ai-reload" data-i18n-title="ai.reload">↻</button>
+            </div>
+        </label>
+
+        <div class="ai-actions">
+            <button data-action="summary" data-i18n="ai.summary"></button>
+            <button data-action="bullets" data-i18n="ai.bullets"></button>
+            <button data-action="skills" data-i18n="ai.skills"></button>
+            <button data-action="review" data-i18n="ai.review"></button>
+            <button data-action="match" data-i18n="ai.match"></button>
+            <button data-action="letter" data-i18n="ai.letter"></button>
+            <button data-action="free" data-i18n="ai.free"></button>
+        </div>
+
+        <label class="field" id="station-field" hidden>
+            <span class="label" data-i18n="ai.station"></span>
+            <select id="ai-station"></select>
+        </label>
+
+        <label class="field" id="free-field" hidden>
+            <span class="label" data-i18n="ai.instruction"></span>
+            <textarea id="ai-free" rows="3" data-i18n-placeholder="ai.instructionHint"></textarea>
+        </label>
+
+        <details class="field">
+            <summary data-i18n="ai.posting"></summary>
+            <textarea id="ai-posting" rows="7" data-i18n-placeholder="ai.postingHint"></textarea>
+        </details>
+
+        <div class="ai-output">
+            <textarea id="ai-text" spellcheck="false"
+                      data-i18n-placeholder="ai.outputHint"></textarea>
+        </div>
+
+        <div class="ai-foot">
+            <button class="btn" id="ai-apply" data-i18n="ai.apply" disabled></button>
+            <button class="btn ghost" id="ai-copy" data-i18n="ai.copy" disabled></button>
+            <button class="btn ghost" id="ai-stop" data-i18n="ai.stop" hidden></button>
+        </div>
+    </div>
+</aside>
+
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="file-json" accept="application/json" hidden>
+<input type="file" id="file-photo" accept="image/*" hidden>
+
+<script src="/static/i18n.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
