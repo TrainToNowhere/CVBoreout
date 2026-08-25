@@ -6,6 +6,7 @@ A desktop app for writing a resume and cover letter for STEM jobs and exporting 
 
 Because im a developer and i develop solutions for problems.
 It automates the repetitive, useless and boring work on design, layout, fonts and line spacing.
+And since most of us aren't the best at writing, an AI - either locally or via an API - helps you craft your text in a professional and concise way.
 
 ## The design
 
