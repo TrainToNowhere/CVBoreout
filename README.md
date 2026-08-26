@@ -33,7 +33,7 @@ make run       # open the app
 ```
 
 Other targets: `make web` (browser instead of a window), `make pdf DOC=resume|letter|both`,
-`make html`, `make test`, `make sample`, `make clean`. `make help` lists them.
+`make html`, `make test`, `make test-ui`, `make sample`, `make clean`. `make help` lists them.
 
 For the assistant: either `ollama serve` with a pulled model, or an API key
 pasted into the assistant panel. Keys are stored in
@@ -61,8 +61,13 @@ cvboreout/
   providers.py  the four AI backends
   prompts.py    prompt building and answer parsing (German/English)
   settings.py   provider, model and API keys
+  posting.py    reading a job posting from a URL
   static/       interface
-tests/smoke.py  self-test: templates, layout, migration, palette, prompts
+tests/
+  smoke.py      documents: templates, layout, migration, palette, prompts
+  server.py     HTTP routes, the token gate, error codes
+  providers.py  the four AI wire formats and the key handling, offline
+  ui.py         the editor in a real WebKit view (`make test-ui`, needs a display)
 ```
 
 A resume from the first release (`data/lebenslauf.json`, German field names) is

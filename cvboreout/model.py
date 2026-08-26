@@ -132,6 +132,7 @@ EMPTY = {
         "position": "",
         "email": "",
         "phone": "",
+        "street": "",
         "location": "",
         "birthDate": "",
         "nationality": "",
@@ -180,6 +181,7 @@ SAMPLE = {
         "position": "Embedded Systems Engineer",
         "email": "manuela.musterfrau@example.de",
         "phone": "+49 151 2345678",
+        "street": "Musterweg 7",
         "location": "12345 Musterstadt",
         "birthDate": "",
         "nationality": "",
@@ -332,7 +334,8 @@ _META_KEYS = {
 }
 _PERSON_KEYS = {
     "vorname": "firstName", "nachname": "lastName", "titel": "title",
-    "position": "position", "email": "email", "telefon": "phone", "ort": "location",
+    "position": "position", "email": "email", "telefon": "phone", "strasse": "street",
+    "ort": "location",
     "geburtsdatum": "birthDate", "staatsangehoerigkeit": "nationality",
     "foto": "photo", "links": "links",
 }

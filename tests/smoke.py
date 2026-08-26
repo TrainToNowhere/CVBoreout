@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import copy
+import http.server
 import json
+import socketserver
 import sys
+import threading
 import time
 from pathlib import Path
 
-from cvboreout import model, pdf, prompts, providers, render, settings
+from cvboreout import model, pdf, posting, prompts, providers, render, settings
+
+from .harness import check, summary
 
 OUT = Path("export/test")
 
@@ -17,11 +23,6 @@ OUT = Path("export/test")
 def _contrast(first: str, second: str) -> float:
     values = sorted(render._luminance(color) for color in (first, second))
     return (values[1] + 0.05) / (values[0] + 0.05)
-
-
-def check(condition: bool, message: str) -> bool:
-    print(f"  {'✓' if condition else '✗'} {message}")
-    return condition
 
 
 def _first_ink_mm(page) -> float:
@@ -35,6 +36,57 @@ def _first_ink_mm(page) -> float:
             if pixels[x, y] < 128:
                 return y / height * 297.0
     return 297.0
+
+
+def _fetch_fails(url: str) -> bool:
+    try:
+        posting.fetch(url)
+    except posting.FetchError:
+        return True
+    return False
+
+
+@contextlib.contextmanager
+def _serving(page: str):
+    """A throwaway web server standing in for a job board."""
+    body = page.encode()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *_):
+            pass
+
+        def _send(self, code, kind=None, payload=b""):
+            self.send_response(code)
+            if kind:
+                self.send_header("Content-Type", kind)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def do_GET(self):
+            if self.path == "/page":
+                return self._send(200, "text/html; charset=utf-8", body)
+            if self.path == "/latin":
+                return self._send(200, "text/html; charset=iso-8859-1",
+                                  "<p>Grüße aus München</p>".encode("latin-1"))
+            if self.path == "/redirect":
+                self.send_response(302)
+                self.send_header("Location", "/page")
+                self.send_header("Content-Length", "0")
+                return self.end_headers()
+            if self.path == "/pdf":
+                return self._send(200, "application/pdf", b"%PDF")
+            if self.path == "/empty":
+                return self._send(200, "text/html")
+            return self._send(404)
+
+    server = socketserver.TCPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}"
+    finally:
+        server.shutdown()
+        server.server_close()
 
 
 def main() -> int:
@@ -196,12 +248,40 @@ def main() -> int:
         failures += not check(expected in headers, f"{provider}: auth header")
     failures += not check("anthropic" in settings.ENV_KEYS, "environment key fallback")
 
+    print("\nJob posting from a URL")
+    page = (
+        '<!doctype html><html><head><title>x</title><style>.a{color:red}</style>'
+        '<script>var hidden = 1;</script></head><body><nav>Start</nav>'
+        '<h1>Embedded Engineer (m/w/d)</h1><p>F&uuml;r sicherheitskritische&nbsp;Firmware.</p>'
+        '<ul><li>C/C++ &amp; Rust</li><li>ISO 26262</li></ul>'
+        '<noscript>JavaScript aktivieren</noscript></body></html>'
+    )
+    text = posting.html_to_text(page)
+    failures += not check("var hidden" not in text and "color:red" not in text
+                          and "JavaScript aktivieren" not in text, "markup and scripts dropped")
+    failures += not check("Für sicherheitskritische Firmware." in text, "entities and nbsp decoded")
+    failures += not check("C/C++ & Rust\nISO 26262" in text, "list items keep one line each")
+    failures += not check(len(posting.html_to_text("<p>x</p>" * 40_000)) <= posting.MAX_CHARS + 2,
+                          "oversized page is capped")
+
+    with _serving(page) as base:
+        failures += not check("Embedded Engineer (m/w/d)" in posting.fetch(base + "/page"),
+                              "page fetched and reduced to text")
+        failures += not check("Grüße" in posting.fetch(base + "/latin"), "charset from the header")
+        failures += not check("Embedded Engineer" in posting.fetch(base + "/redirect"),
+                              "redirect followed")
+        for name, path in [("PDF refused", "/pdf"), ("empty page refused", "/empty"),
+                           ("HTTP error reported", "/missing")]:
+            failures += not check(_fetch_fails(base + path), name)
+    failures += not check(_fetch_fails("file:///etc/passwd"), "only http and https")
+    failures += not check(_fetch_fails("   "), "empty address refused")
+
     round_trip = model.normalize(json.loads(json.dumps(data)))
     failures += not check(round_trip["person"]["lastName"] == sample_name, "JSON round trip")
 
-    print(f"\n{'All good.' if not failures else f'{failures} check(s) failed.'}")
+    code = summary(failures)
     print(f"Artifacts in {OUT}/")
-    return 1 if failures else 0
+    return code
 
 
 if __name__ == "__main__":

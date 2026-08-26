@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import model, pdf, prompts, providers, settings
+from . import model, pdf, posting, prompts, providers, settings
 
 STATIC = Path(__file__).parent / "static"
 
@@ -129,6 +129,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._post(parsed.path)
         except pdf.RenderError as error:
             return self._fail(error, 500)
+        except posting.FetchError as error:
+            return self._fail(error, 400)
         except providers.ProviderError as error:
             return self._fail(error, 502)
         except Exception as error:  # pragma: no cover
@@ -186,6 +188,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(model.retitle_sections(data, language))
         if path == "/api/ai":
             return self._stream(body)
+        if path == "/api/posting":
+            return self._json({"text": posting.fetch(body.get("url", ""))})
         return self._fail("Unknown route", 404)
 
     def _export(self, body):
