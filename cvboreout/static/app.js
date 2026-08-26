@@ -141,6 +141,10 @@ function el(tag, properties = {}, children = []) {
   return node;
 }
 
+function subhead(text) {
+  return el("div", { class: "subhead", text });
+}
+
 function field(label, ...content) {
   return el("label", { class: "field" }, [
     label ? el("span", { class: "label", text: label }) : null,
@@ -341,8 +345,19 @@ function tagList(owner, key, options = {}) {
         values[index] = node.value;
         changed();
       });
+      const move = (direction) => {
+        const target = index + direction;
+        if (target < 0 || target >= values.length) return;
+        [values[index], values[target]] = [values[target], values[index]];
+        draw();
+        changed();
+      };
       holder.append(el("div", { class: "row" }, [
         node,
+        el("div", { class: "arrows" }, [
+          el("button", { text: "▲", title: t("act.up"), onclick: () => move(-1) }),
+          el("button", { text: "▼", title: t("act.down"), onclick: () => move(1) }),
+        ]),
         el("button", {
           class: "btn tiny", text: "×", title: t("act.delete"),
           onclick: () => { values.splice(index, 1); draw(); changed(); },
@@ -586,22 +601,17 @@ function personEditor() {
   };
 
   return [
+    subhead(t("f.subName")),
     el("div", { class: "grid3" }, [
       field(t("f.firstName"), input(person, "firstName")),
       field(t("f.lastName"), input(person, "lastName")),
       field(t("f.title"), input(person, "title", { placeholder: "M.Sc." })),
     ]),
-    field(t("f.position"), input(person, "position")),
     el("div", { class: "grid2" }, [
-      field(t("f.email"), input(person, "email")),
-      field(t("f.phone"), input(person, "phone")),
-    ]),
-    el("div", { class: "grid3" }, [
-      field(t("f.location"), input(person, "location")),
-      field(t("f.birthDate"), input(person, "birthDate", { placeholder: t("f.optional") })),
       field(t("f.nationality"), input(person, "nationality", { placeholder: t("f.optional") })),
+      field(t("f.birthDate"), input(person, "birthDate", { placeholder: t("f.optional") })),
     ]),
-    field(t("f.links"), linkHolder),
+    field(t("f.position"), input(person, "position")),
     field(t("f.photo"), el("div", { class: "row" }, [
       image,
       el("button", { class: "btn tiny", text: t("f.chooseImage"), onclick: choosePhoto }),
@@ -610,6 +620,19 @@ function personEditor() {
         onclick: () => { person.photo = ""; image.hidden = true; changed(); },
       }),
     ])),
+
+    subhead(t("f.subAddress")),
+    el("div", { class: "grid2" }, [
+      field(t("f.street"), input(person, "street", { placeholder: t("f.optional") })),
+      field(t("f.city"), input(person, "location")),
+    ]),
+
+    subhead(t("f.subContact")),
+    el("div", { class: "grid2" }, [
+      field(t("f.email"), input(person, "email")),
+      field(t("f.phone"), input(person, "phone")),
+    ]),
+    field(t("f.links"), linkHolder),
   ];
 }
 
@@ -637,11 +660,23 @@ function skillsEditor() {
       const drawRows = () => {
         rows.textContent = "";
         groupData.items.forEach((item, itemIndex) => {
+          const moveItem = (direction) => {
+            const target = itemIndex + direction;
+            if (target < 0 || target >= groupData.items.length) return;
+            [groupData.items[itemIndex], groupData.items[target]] =
+              [groupData.items[target], groupData.items[itemIndex]];
+            drawRows();
+            changed();
+          };
           rows.append(el("div", { class: "row" }, [
             input(item, "name", { placeholder: "Python" }),
             levels(item),
+            el("div", { class: "arrows" }, [
+              el("button", { text: "▲", title: t("act.up"), onclick: () => moveItem(-1) }),
+              el("button", { text: "▼", title: t("act.down"), onclick: () => moveItem(1) }),
+            ]),
             el("button", {
-              class: "btn tiny", text: "×",
+              class: "btn tiny", text: "×", title: t("act.delete"),
               onclick: () => { groupData.items.splice(itemIndex, 1); drawRows(); changed(); },
             }),
           ]));
@@ -869,7 +904,17 @@ async function loadPreview() {
   }
 }
 
+/** The badge in a group header follows the data, not the last full redraw. */
+function refreshCounts() {
+  for (const node of document.querySelectorAll("#editor details.group[data-id]")) {
+    const badge = node.querySelector("summary .count");
+    const list = DATA[node.dataset.id];
+    if (badge && Array.isArray(list)) badge.textContent = String(list.length);
+  }
+}
+
 function changed() {
+  refreshCounts();
   applyAccent();
   clearTimeout(previewTimer);
   clearTimeout(saveTimer);
@@ -1013,11 +1058,25 @@ function openAI(action = null, index = null, text = null, target = "summary") {
   }
 }
 
+const AI_ACTIONS = ["summary", "bullets", "skills", "review", "match",
+                    "letter", "proofread", "free"];
+
+function fillActions() {
+  const node = $("#ai-action");
+  const previous = node.value;
+  node.textContent = "";
+  for (const action of AI_ACTIONS) {
+    node.append(el("option", { value: action, text: t("ai." + action) }));
+  }
+  node.value = previous || ai.action || AI_ACTIONS[0];
+}
+
 function chooseAction(action) {
   ai.action = action;
-  for (const button of document.querySelectorAll(".ai-actions button")) {
-    button.classList.toggle("active", button.dataset.action === action);
-  }
+  $("#ai-action").value = action;
+  // The mode can be picked at any time, so the station list is refreshed here
+  // rather than only when the panel opens.
+  if (action === "bullets") fillStations();
   $("#station-field").hidden = action !== "bullets";
   $("#free-field").hidden = action !== "free";
 }
@@ -1033,6 +1092,35 @@ function fillStations() {
     }));
   });
   if (previous) node.value = previous;
+}
+
+/** The play button turns into a stop button while a request is running. */
+function setRunning(running) {
+  const button = $("#ai-run");
+  button.textContent = running ? "■" : "▶";
+  button.title = t(running ? "ai.stop" : "ai.run");
+  button.classList.toggle("running", running);
+}
+
+/** Fetches a job posting through the server and drops its text into the box. */
+async function loadPosting() {
+  const url = $("#ai-posting-url").value.trim();
+  if (!url) return toast(t("ai.needUrl"), true);
+  const button = $("#ai-posting-load");
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = t("ai.postingLoading");
+  try {
+    const result = await api("/api/posting", { body: { url } });
+    $("#ai-posting").value = result.text;
+    store.set("cvboreout.posting", result.text);
+    toast(t("ai.postingLoaded"));
+  } catch (error) {
+    toast(t("ai.postingFailed") + ": " + error.message, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+  }
 }
 
 async function runAI() {
@@ -1055,7 +1143,7 @@ async function runAI() {
   $("#ai-text").value = "";
   $("#ai-apply").disabled = true;
   $("#ai-copy").disabled = true;
-  $("#ai-stop").hidden = false;
+  setRunning(true);
   $("#ai-status").textContent = `${model} ${t("ai.thinking")}`;
 
   aiAbort = new AbortController();
@@ -1103,7 +1191,8 @@ async function runAI() {
       toast("KI: " + error.message, true);
     }
   } finally {
-    $("#ai-stop").hidden = true;
+    aiAbort = null;
+    setRunning(false);
   }
 }
 
@@ -1183,7 +1272,9 @@ function fillTopbar() {
 async function switchLanguage(target) {
   DATA = await api("/api/language", { body: { data: DATA, language: target } });
   translateStatic();
+  setRunning(!!aiAbort);
   fillTopbar();
+  fillActions();
   renderEditor();
   updateKeyField();
   chooseAction(ai.action);
@@ -1313,19 +1404,26 @@ function bindEvents() {
     saveSettings({ provider: currentProvider(), model: event.target.value }).catch(() => {}));
   $("#ai-apply").addEventListener("click", applyAI);
   $("#ai-copy").addEventListener("click", () => copyText($("#ai-text").value));
-  $("#ai-stop").addEventListener("click", () => aiAbort && aiAbort.abort());
-  for (const button of document.querySelectorAll(".ai-actions button")) {
-    button.addEventListener("click", () => {
-      ai.target = "summary";
-      if (button.dataset.action === "proofread") ai.source = DATA.summary;
-      chooseAction(button.dataset.action);
-      runAI();
-    });
-  }
+  $("#ai-action").addEventListener("change", (event) => chooseAction(event.target.value));
+  $("#ai-run").addEventListener("click", () => {
+    if (aiAbort) return aiAbort.abort();
+    const action = $("#ai-action").value;
+    ai.target = "summary";
+    if (action === "proofread") ai.source = DATA.summary;
+    chooseAction(action);
+    runAI();
+  });
 
   $("#ai-posting").value = store.get("cvboreout.posting");
   $("#ai-posting").addEventListener("input", (event) =>
     store.set("cvboreout.posting", event.target.value));
+  $("#ai-posting-url").value = store.get("cvboreout.postingUrl");
+  $("#ai-posting-url").addEventListener("input", (event) =>
+    store.set("cvboreout.postingUrl", event.target.value));
+  $("#ai-posting-url").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); loadPosting(); }
+  });
+  $("#ai-posting-load").addEventListener("click", loadPosting);
 
   $("#btn-menu").addEventListener("click", (event) => {
     event.stopPropagation();
@@ -1393,6 +1491,7 @@ async function start() {
     ["Translation", translateStatic],
     ["Topbar", fillTopbar],
     ["Providers", fillProviders],
+    ["Actions", () => { fillActions(); chooseAction($("#ai-action").value); }],
     ["Keys", updateKeyField],
     ["Events", bindEvents],
     ["Handles", makeHandles],

@@ -298,10 +298,15 @@ def sections_html(data: dict, column: str, single_column: bool) -> str:
 def contact_lines(person: dict, language: str, with_icons: bool = True) -> list[str]:
     lines = []
     born = "geb." if language == "de" else "born"
+    # Escaping happens once, in the loop below.
+    address = ", ".join(
+        part for part in [str(person.get("street") or "").strip(),
+                          str(person.get("location") or "").strip()] if part
+    )
     pairs = [
         ("mail", person.get("email")),
         ("phone", person.get("phone")),
-        ("pin", person.get("location")),
+        ("pin", address),
     ]
     if e(person.get("birthDate")):
         pairs.append(("cal", f'{born} {e(person["birthDate"])}'))

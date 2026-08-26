@@ -100,15 +100,12 @@
             </div>
         </label>
 
-        <div class="ai-actions">
-            <button data-action="summary" data-i18n="ai.summary"></button>
-            <button data-action="bullets" data-i18n="ai.bullets"></button>
-            <button data-action="skills" data-i18n="ai.skills"></button>
-            <button data-action="review" data-i18n="ai.review"></button>
-            <button data-action="match" data-i18n="ai.match"></button>
-            <button data-action="letter" data-i18n="ai.letter"></button>
-            <button data-action="free" data-i18n="ai.free"></button>
-        </div>
+        <label class="field"><span class="label" data-i18n="ai.action"></span>
+            <div class="row">
+                <select id="ai-action"></select>
+                <button class="btn" id="ai-run" data-i18n-title="ai.run">▶</button>
+            </div>
+        </label>
 
         <label class="field" id="station-field" hidden>
             <span class="label" data-i18n="ai.station"></span>
@@ -122,6 +119,10 @@
 
         <details class="field">
             <summary data-i18n="ai.posting"></summary>
+            <div class="row">
+                <input id="ai-posting-url" data-i18n-placeholder="ai.postingUrlHint">
+                <button class="btn ghost" id="ai-posting-load" data-i18n="ai.postingLoad"></button>
+            </div>
             <textarea id="ai-posting" rows="7" data-i18n-placeholder="ai.postingHint"></textarea>
         </details>
 
@@ -133,7 +134,6 @@
         <div class="ai-foot">
             <button class="btn" id="ai-apply" data-i18n="ai.apply" disabled></button>
             <button class="btn ghost" id="ai-copy" data-i18n="ai.copy" disabled></button>
-            <button class="btn ghost" id="ai-stop" data-i18n="ai.stop" hidden></button>
         </div>
     </div>
 </aside>

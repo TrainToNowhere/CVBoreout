@@ -7,7 +7,7 @@ TARGET  ?= export/Resume.pdf
 DOC     ?= resume        # resume | letter | both
 
 .DEFAULT_GOAL := help
-.PHONY: help setup run web pdf html sample test lint clean distclean
+.PHONY: help setup run web pdf html sample test test-ui lint clean distclean
 
 help: ## Show this overview
 	@echo "CVBoreout - available targets:"
@@ -42,8 +42,13 @@ sample: setup ## Write the sample resume to $(FILE)
 	model.save(Path('$(FILE)'), model.normalize(model.SAMPLE))"
 	@echo ">> $(FILE) created"
 
-test: setup ## Self-test: render every template and check the result
+test: setup ## Self-test: documents, server routes and AI backends
 	$(BIN)/python -m tests.smoke
+	$(BIN)/python -m tests.server
+	$(BIN)/python -m tests.providers
+
+test-ui: setup ## Self-test of the editor in a real WebKit view (needs a display)
+	$(BIN)/python -m tests.ui
 
 lint: ## Byte-compile the sources as a syntax check
 	$(PY) -m compileall -q cvboreout tests
