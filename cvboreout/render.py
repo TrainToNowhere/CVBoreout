@@ -369,6 +369,7 @@ def base_css(meta: dict) -> str:
   --sidebar-dot: rgba({sidebar_ink}, .26);
   --gap: {density['gap']}mm;
   --section: {density['section']}mm;
+  --line: {density['line']};
   --text: #1b2027;
   --muted: #5b6472;
   --rule: #d9dee5;
@@ -378,7 +379,7 @@ body {{
   margin: 0;
   font-family: "{font}", "Noto Sans", "Liberation Sans", sans-serif;
   font-size: {size}pt;
-  line-height: {density['line']};
+  line-height: var(--line);
   color: var(--text);
   hyphens: auto;
 }}
@@ -388,7 +389,11 @@ ul {{ margin: 1.2mm 0 0; padding-left: 4.2mm; }}
 li {{ margin-bottom: 1.1mm; }}
 li::marker {{ color: var(--accent); }}
 a {{ color: inherit; text-decoration: none; }}
-.ic {{ vertical-align: -0.12em; flex: none; }}
+.ic {{
+  width: 1em; height: 1em; flex: none; align-self: flex-start;
+  /* Centre the icon on the first text line instead of its top edge. */
+  margin-top: calc((1em * var(--line) - 1em) / 2);
+}}
 
 .sec {{ margin-bottom: var(--section); }}
 .sec:last-child {{ margin-bottom: 0; }}
